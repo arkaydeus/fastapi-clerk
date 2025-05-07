@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from app.core.auth import get_current_clerk_id
 from app.core.dependencies import get_clerk_id
 from app.core.logging import logger
 from app.db.database import get_db
@@ -23,30 +24,25 @@ router = APIRouter(prefix="/users", tags=["users"])
     summary="Get Current User",
     description="Get the current authenticated user or create a new one if not found.",
 )
-async def get_current_user(request: Request, db: Session = Depends(get_db)):
+async def get_current_user(
+    clerk_id: str = Depends(get_current_clerk_id), db: Session = Depends(get_db)
+):
     """
     Get the current authenticated user or create them if they don't exist.
 
-    This endpoint:
-    1. Gets the user's Clerk ID from the authentication token
-    2. Checks if a user with that Clerk ID exists in the database
-    3. Creates a new user if one doesn't exist
-    4. Returns the user data
+    This endpoint uses strict authentication with get_current_clerk_id, which will
+    raise a 401 Unauthorized exception if authentication fails.
 
     Args:
-        request: The FastAPI request containing authentication info
+        clerk_id: The authenticated user's Clerk ID from the JWT token
         db: Database session dependency
 
     Returns:
         UserResponse: The user data object
-
-    Raises:
-        HTTPException: If authentication fails
     """
     logger.info("Get current user endpoint accessed")
 
     try:
-        clerk_id = await get_clerk_id(request)
         logger.info(
             "Authenticated user accessing their profile", extra={"clerk_id": clerk_id}
         )
@@ -75,7 +71,9 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     description="Update the current user's preferences like telegram handle and reminder days.",
 )
 async def update_current_user(
-    preferences: UserUpdate, request: Request, db: Session = Depends(get_db)
+    preferences: UserUpdate,
+    clerk_id: str = Depends(get_current_clerk_id),
+    db: Session = Depends(get_db),
 ):
     """
     Update the current user's preferences.
@@ -86,7 +84,7 @@ async def update_current_user(
 
     Args:
         preferences: User preferences data to update
-        request: The FastAPI request containing authentication info
+        clerk_id: The authenticated user's Clerk ID from the JWT token
         db: Database session dependency
 
     Returns:
@@ -98,7 +96,6 @@ async def update_current_user(
     logger.info("Update user preferences endpoint accessed")
 
     try:
-        clerk_id = await get_clerk_id(request)
         logger.info(
             "User attempting to update preferences",
             extra={
@@ -142,7 +139,9 @@ async def update_current_user(
     summary="Delete Current User",
     description="Delete the current user's account completely.",
 )
-async def delete_current_user(request: Request, db: Session = Depends(get_db)):
+async def delete_current_user(
+    clerk_id: str = Depends(get_current_clerk_id), db: Session = Depends(get_db)
+):
     """
     Delete the current user.
 
@@ -150,7 +149,7 @@ async def delete_current_user(request: Request, db: Session = Depends(get_db)):
     Note: This does not delete the user from Clerk, only from our database.
 
     Args:
-        request: The FastAPI request containing authentication info
+        clerk_id: The authenticated user's Clerk ID from the JWT token
         db: Database session dependency
 
     Returns:
@@ -162,7 +161,6 @@ async def delete_current_user(request: Request, db: Session = Depends(get_db)):
     logger.info("Delete user endpoint accessed")
 
     try:
-        clerk_id = await get_clerk_id(request)
         logger.info(
             "User attempting to delete their account", extra={"clerk_id": clerk_id}
         )
