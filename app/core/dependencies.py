@@ -1,8 +1,6 @@
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Request, status
-
-from app.core.auth import get_current_clerk_id
+from fastapi import HTTPException, Request, status
 
 
 async def get_clerk_id(request: Request) -> str:
